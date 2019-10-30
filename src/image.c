@@ -4,11 +4,73 @@
 #include "cuda.h"
 #include <stdio.h>
 #include <math.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <string.h>
+#include <termios.h>
+#include <unistd.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+
+int set_interface_attribs(int fd, int speed)
+{
+	struct termios tty;
+
+	if (tcgetattr(fd, &tty) < 0) {
+		printf("Error from tcgetattr: %s\n", strerror(errno));
+		return -1;
+	}
+
+	cfsetospeed(&tty, (speed_t)speed);
+	cfsetispeed(&tty, (speed_t)speed);
+
+	tty.c_cflag |= (CLOCAL | CREAD);    /* ignore modem controls */
+	tty.c_cflag &= ~CSIZE;
+	tty.c_cflag |= CS8;         /* 8-bit characters */
+	tty.c_cflag &= ~PARENB;     /* no parity bit */
+	tty.c_cflag &= ~CSTOPB;     /* only need 1 stop bit */
+	tty.c_cflag &= ~CRTSCTS;    /* no hardware flowcontrol */
+
+								/* setup for non-canonical mode */
+	tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+	tty.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+	tty.c_oflag &= ~OPOST;
+
+	/* fetch bytes as they become available */
+	tty.c_cc[VMIN] = 1;
+	tty.c_cc[VTIME] = 1;
+
+	if (tcsetattr(fd, TCSANOW, &tty) != 0) {
+		printf("Error from tcsetattr: %s\n", strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
+char *int_to_string(int val) {
+	char *reslut_string;
+
+		if (val == 1) reslut_string = "1";
+		else if (val == 2) reslut_string = "2";
+		else if (val == 3) reslut_string = "3";
+		else if (val == 4) reslut_string = "4";
+		else if (val == 5) reslut_string = "5";
+		else if (val == 6) reslut_string = "6";
+		else if (val == 7) reslut_string = "7";
+		else if (val == 8) reslut_string = "8";
+		else if (val == 9) reslut_string = "9";
+		else reslut_string = "0";
+	
+
+	return reslut_string;
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////
 
 int windows = 0;
 
@@ -239,20 +301,32 @@ image **load_alphabet()
 void draw_detections(image im, detection *dets, int num, float thresh, char **names, image **alphabet, int classes)
 {
     int i,j;
-
+    int person_idx = 1;/////////////////////////
+    int person_correct = 0;/////////////////////////
     for(i = 0; i < num; ++i){
         char labelstr[4096] = {0};
         int class = -1;
         for(j = 0; j < classes; ++j){
             if (dets[i].prob[j] > thresh){
-                if (class < 0) {
+		//if (strcmp(names[j],"person") == 0){/////////////////////////  
+		person_correct = dets[i].prob[j] * 100;          
+		if (class < 0) {
                     strcat(labelstr, names[j]);
+                    strcat(labelstr, int_to_string(person_idx));/////////////////////////
+                    strcat(labelstr, "  ");/////////////////////////
+                    strcat(labelstr, int_to_string(person_correct / 10));/////////////////////////
+                    strcat(labelstr, int_to_string(person_correct % 10));/////////////////////////
                     class = j;
                 } else {
                     strcat(labelstr, ", ");
                     strcat(labelstr, names[j]);
+                    strcat(labelstr, int_to_string(person_idx));/////////////////////////
+                    strcat(labelstr, "  ");/////////////////////////
+                    strcat(labelstr, int_to_string(person_correct / 10));/////////////////////////
+                    strcat(labelstr, int_to_string(person_correct % 10));/////////////////////////
                 }
-                printf("%s: %.0f%%\n", names[j], dets[i].prob[j]*100);
+		//}/////////////////////////////
+                printf("%s %d: %.0f%%\n", names[j], person_idx++, dets[i].prob[j]*100);///////////////////////// person_idx++
             }
         }
         if(class >= 0){
@@ -289,6 +363,78 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             if(right > im.w-1) right = im.w-1;
             if(top < 0) top = 0;
             if(bot > im.h-1) bot = im.h-1;
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+            int fd = 0;
+            char *portname = "/dev/ttyACM0"; // lab car
+            //char *portname = "/dev/ttyUSB0"; // avr board
+            int wlen = 0;
+
+            fd = open(portname, O_RDWR | O_NOCTTY | O_SYNC);
+            if (fd < 0) {
+		printf("Error opening %s: %s\n", portname, strerror(errno));
+		// return ;
+            }
+
+            /*baudrate 115200, 8 bits, no parity, 1 stop bit */
+            set_interface_attribs(fd, B115200); // lab car
+            //set_interface_attribs(fd, B9600); // avr board
+            //set_mincount(fd, 0);                /* set to pure timed read */
+
+
+
+            int cam_horizontal_center = im.w/2;
+            int cam_vertical_center = im.h/2;
+            printf("cam center : (%d, %d)\n", cam_horizontal_center,cam_vertical_center);
+            //printf("cam 1/3 : (%d, %d)\n", im.w/3,cam_vertical_center);
+            //printf("cam 2/3 : (%d, %d)\n", im.w/3*2,cam_vertical_center);
+            
+
+            int box_horizontal_center = left + ((right - left)/2);
+            int box_vertical_center = top + ((bot - top)/2);
+            printf("box center : (%d, %d)\n", box_horizontal_center,box_vertical_center);
+
+            //int image_area = im.w * im.h;
+            //int box_area = (right - left)*(bot - top);
+            //printf("box area : %d = (%d X %d)\n", box_area, (right - left), (bot - top));
+
+
+            int where_is_box = box_horizontal_center - cam_horizontal_center;
+            printf("where is box : %d\n", where_is_box);
+            
+
+            char* uart_write_data[4] = {"0", "0", "0", "0"}; 
+
+            if (!(where_is_box < 0)) uart_write_data[3] = "1";
+            else {
+		uart_write_data[3] = "0";
+		where_is_box = -1 * where_is_box; 
+            }
+
+            if (where_is_box < 100) uart_write_data[2] = "0";
+            else uart_write_data[2] = int_to_string(where_is_box / 100);
+
+            where_is_box = where_is_box % 100;
+
+            if (where_is_box < 10) uart_write_data[1] = "0";
+            else uart_write_data[1] = int_to_string(where_is_box / 10);
+
+            uart_write_data[0] = int_to_string(where_is_box % 10);
+            printf("write data : %s %s %s %s\n\n", uart_write_data[3], uart_write_data[2], uart_write_data[1], uart_write_data[0]);
+
+
+            for (int uart_idx  = 3; uart_idx > -1; uart_idx--) {
+		wlen = write(fd, uart_write_data[uart_idx], 1);
+
+		/* simple output */
+		if (!(wlen > 0)) {
+			printf("Error from write: %d, %d\n", wlen, errno);
+		}
+		tcdrain(fd);    /* delay for output */
+            }
+
+//////////////////////////////////////////////////////////////////////////////////////////////
 
             draw_box_width(im, left, top, right, bot, width, red, green, blue);
             if (alphabet) {

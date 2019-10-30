@@ -1,0 +1,77 @@
+9.27
+
+~/.bashrc 
+   - cuda9.0 path 설정
+   - https://github.com/pjreddie/darknet/issues/200
+
+darknet/data/coco.names
+   - person을 제외한 나머지 class들 다 삭제
+
+darknet/cfg/coco.data
+   - class 수를 80에서 1로 변경
+
+darknet/examples/detector.c
+   - demo실행시 필요한 arguments 터미널 창에 출력
+
+darkent/src/image.c
+   - person만 box와 라벨 만들 수 있도록 (다른 객체 인식되어도 박스랑 라벨 안 만듦)   *** 현재 주석처리 ***
+   - 박스의 중심이 캠화면의 중심에서 왼쪽 또는 오른쪽으로 벗어나 있는지 판단 후 카메라 돌리는 명령
+
+
+========================================================================
+
+10.11
+
+darkent/src/image.c
+   - #define car_state 9개 
+   - 박스 위치와 크기에따라 (왼쪽, 오른쪽, 가운데) x (빠름, 느림, 보통) 총 9가지 명령
+
+
+========================================================================
+
+10.24
+
+darkent/src/image.c
+   - #define car_state 9개						-> 취소
+   - 박스 위치와 크기에따라 (왼쪽, 오른쪽, 가운데) x (빠름, 느림, 보통) 총 9가지 명령	-> 취소
+   - 사람이 왼쪽이면 0xxx / 오른쪽으면 1xxx 로 uart 전송
+   - xxx : 사람 화면 중앙으로 부터 몇 픽셀 떨어져 있는지
+   - 객체인식된 사람 numbering하고(정확도가 높은 순), 정확도도 같이 labeling
+
+
+========================================================================
+
+10.29
+
+darkent/mytask
+   - 폴더 생성
+   - SIFT.c 예제 소스파일
+   - my task.txt
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+threshold 낮게 하면 낮은 정확도라도 객체인식 됨
+
+DC power port: 2DC-G213-B51, (2.5mm x 5.5mm)
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+char *cfg		: cfg 파일이름				반드시 정해야 함		argv[4]
+char *weights	: weights 파일이름				반드시 정해야 함		argv[5]
+float thresh	: 객체인식 정확도의 threshold			기본값 : 0.5		-thresh
+int cam_index	: filename 지정해 주지 않았을떄 카메라		기본값 : 0			-c
+char *filename	: 프레임을 받아올 source			기본값 : "(null)"		argv[6]
+char **names	: 객체인식될 객체의 이름			cfg/*.data파일을 열어보고 결정됨	
+int classes		: 객체인식될 객체의 이름의 종류 개수		cfg/*.data파일을 열어보고 결정됨	
+int frame_skip	: delay *** 안쓰이는듯? ***			기본값 : 1			-s
+char *prefix	: 이미지를 해당 이름의 *.jpg 파일로 저장 (화면안뜸)	기본값 : "(null)"		-prefix
+int avg		: ???    *** 안쓰이는듯? ***			기본값 : 3			-avg
+float hier_thresh	: ???    *** 안쓰이는듯? ***			기본값 : 0.5		-hier
+int width		: cam_index로 동작시킬 때 width 설정		기본값 : 0			-w
+int height		: cam_index로 동작시킬 때 height 설정		기본값 : 0			-h
+int fps		: cam_index로 동작시킬 떄 fps 설정		기본값 : 0			-fps
+int fullscreen	: 전체화면 여부				기본값 : 0			-fullscreen
+
+./darknet detector demo cfg/coco.data cfg/yolov3-tiny.cfg yolov3-tiny.weights /dev/video1 -thresh 0.3 -fullscreen 1

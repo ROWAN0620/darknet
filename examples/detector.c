@@ -843,7 +843,16 @@ void run_detector(int argc, char **argv)
         int classes = option_find_int(options, "classes", 20);
         char *name_list = option_find_str(options, "names", "data/names.list");
         char **names = get_labels(name_list);
+	
+	printf("\n\n============================== demo arguments ==============================\n");
+	printf("\ncfg: %s\tweights: %s", cfg, weights);
+	printf("\nthresh: %2f\tcam_index: %d\tfilename: %s", thresh, cam_index, filename);
+	for (int i = 0; i < classes; i++) printf("\tnames: %s", names[i]);
+	printf("\nclasses: %d\tframe_skip: %d\tprefix: %s\tavg: %d\thier_thresh: %2f",classes, frame_skip, prefix, avg, hier_thresh);
+	printf("\nwidth: %d\theight: %d\tfps: %d\tfullscreen: %d", width,height, fps, fullscreen);
+	printf("\n\n============================================================================\n\n");
         demo(cfg, weights, thresh, cam_index, filename, names, classes, frame_skip, prefix, avg, hier_thresh, width, height, fps, fullscreen);
+
     }
     //else if(0==strcmp(argv[2], "extract")) extract_detector(datacfg, cfg, weights, cam_index, filename, class, thresh, frame_skip);
     //else if(0==strcmp(argv[2], "censor")) censor_detector(datacfg, cfg, weights, cam_index, filename, class, thresh, frame_skip);
