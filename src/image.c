@@ -26,7 +26,7 @@ int set_interface_attribs(int fd, int speed)
 	struct termios tty;
 
 	if (tcgetattr(fd, &tty) < 0) {
-		printf("Error from tcgetattr: %s\n", strerror(errno));
+		printf("Error from tcgetattr: %s\n\n", strerror(errno));
 		return -1;
 	}
 
@@ -306,16 +306,18 @@ image **load_alphabet()
 void draw_detections(image im, detection *dets, int num, float thresh, char **names, image **alphabet, int classes)
 {
     int i,j;
-    int person_idx = 1;/////////////////////////
+    int person_idx = 0;/////////////////////////
     int person_correct = 0;/////////////////////////
-    int person_box[num][4] = { 0, };/////////////////////////
+    int person_box[num][4];/////////////////////////
+    int person_box_idx = 0;/////////////////////////
     int traking_person_idx = 0;/////////////////////////
     for(i = 0; i < num; ++i){
         char labelstr[4096] = {0};
         int class = -1;
         for(j = 0; j < classes; ++j){
             if (dets[i].prob[j] > thresh){
-                //if (strcmp(names[j],"person") == 0){/////////////////////////  
+                //if (strcmp(names[j],"person") == 0){/////////////////////////
+                person_idx ++;
                 person_correct = dets[i].prob[j] * 100;          
                 if (class < 0) {
                     strcat(labelstr, names[j]);
@@ -333,9 +335,11 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
                     strcat(labelstr, int_to_string(person_correct % 10));/////////////////////////
                 }
                 //}/////////////////////////////
-                printf("%s %d: %.0f%%\n", names[j], person_idx++, dets[i].prob[j]*100);///////////////////////// person_idx++
+                printf("%s %d: %.0f%%\n", names[j], person_idx, dets[i].prob[j]*100);///////////////////////// person_idx++
             }
         }
+
+        
         if(class >= 0){
             int width = im.h * .006;
 
@@ -371,10 +375,12 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             if(top < 0) top = 0;
             if(bot > im.h-1) bot = im.h-1;
 
-            person_box[i][PERSON_BOX_LEFT] = left;/////////////////////////
-            person_box[i][PERSON_BOX_RIGHT] = right;/////////////////////////
-            person_box[i][PERSON_BOX_TOP] = top;/////////////////////////
-            person_box[i][PERSON_BOX_BOT] = bot;/////////////////////////
+            if (dets[i].prob[0] > thresh) {
+                person_box[person_box_idx][PERSON_BOX_LEFT] = left;/////////////////////////
+                person_box[person_box_idx][PERSON_BOX_RIGHT] = right;/////////////////////////
+                person_box[person_box_idx][PERSON_BOX_TOP] = top;/////////////////////////
+                person_box[person_box_idx++][PERSON_BOX_BOT] = bot;/////////////////////////
+            }
 
 
             draw_box_width(im, left, top, right, bot, width, red, green, blue);
@@ -395,8 +401,12 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
         }
     }
 
-    if (num > 0) {
-        if (num == 1) traking_person_idx = 0;
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+    printf("j = %d\n",j);/////////////////////////////
+    printf("number of person : %d / %d\n", person_idx, num);
+    if (person_idx > 0) {
+        if (person_idx == 1) traking_person_idx = 0;
         else {
             int near_center_person_idx = 0;
             int horizontal_center_diff = 0;
@@ -443,7 +453,7 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             //set_interface_attribs(fd, B9600); // avr board
             //set_mincount(fd, 0);                /* set to pure timed read */
 
-
+            printf("tracking person%d...\n", traking_person_idx + 1);
 
             int cam_horizontal_center = im.w/2;
             int cam_vertical_center = im.h/2;
