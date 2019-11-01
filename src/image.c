@@ -403,8 +403,7 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-    printf("j = %d\n",j);/////////////////////////////
-    printf("number of person : %d / %d\n", person_idx, num);
+    printf("number of person : %d / %d\n\n", person_idx, num);
     if (person_idx > 0) {
         if (person_idx == 1) traking_person_idx = 0;
         else {
@@ -418,9 +417,10 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             if (current_near_vertical_center_diff < 0) current_near_vertical_center_diff = current_near_vertical_center_diff * (-1);
 
             int current_diff = (currnent_near_horizontal_center_diff * currnent_near_horizontal_center_diff) + (current_near_vertical_center_diff * current_near_vertical_center_diff);
+            printf("person1 far from center: %d\n", current_diff);
             int diff = 0;
 
-            for (i = 1; i < num; i++ ) {
+            for (i = 1; i < person_idx; i++ ) {
 
                 horizontal_center_diff = (im.w / 2) - (person_box[i][PERSON_BOX_LEFT] + ((person_box[i][PERSON_BOX_RIGHT] - person_box[i][PERSON_BOX_LEFT]) / 2));
                 if (horizontal_center_diff < 0) horizontal_center_diff = horizontal_center_diff * (-1);
@@ -428,6 +428,8 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
                 if (vertical_center_diff < 0) vertical_center_diff = vertical_center_diff * (-1);
 
                 diff = (horizontal_center_diff * horizontal_center_diff) + (vertical_center_diff * vertical_center_diff);
+
+                printf("person%d far from center: %d\n", i + 1, diff);
 
                 if (diff < current_diff) near_center_person_idx = i;
                 
@@ -456,19 +458,22 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             printf("tracking person%d...\n", traking_person_idx + 1);
 
             int cam_horizontal_center = im.w/2;
-            int cam_vertical_center = im.h/2;
-            printf("cam center : (%d, %d)\n", cam_horizontal_center,cam_vertical_center);
+            //int cam_vertical_center = im.h/2;
+            //printf("cam center : (%d, %d)\n", cam_horizontal_center,cam_vertical_center);
             //printf("cam 1/3 : (%d, %d)\n", im.w/3,cam_vertical_center);
             //printf("cam 2/3 : (%d, %d)\n", im.w/3*2,cam_vertical_center);
 
             int box_horizontal_center = 0;
-            int box_vertical_center = 0;
+            //int box_vertical_center = 0;
             
+
+            /*
             for (i = 0; i < person_idx; i++) {
                 box_horizontal_center = person_box[i][PERSON_BOX_LEFT] + ((person_box[i][PERSON_BOX_RIGHT] - person_box[i][PERSON_BOX_LEFT])/2);
                 box_vertical_center = person_box[i][PERSON_BOX_TOP] + ((person_box[i][PERSON_BOX_BOT] - person_box[i][PERSON_BOX_TOP])/2);
-                printf("person%d box center : (%d, %d)\n", i, box_horizontal_center,box_vertical_center);
+                printf("person%d box center : (%d, %d)\n", i+1, box_horizontal_center,box_vertical_center);
             }
+            */
             
 
             box_horizontal_center = person_box[traking_person_idx][PERSON_BOX_LEFT] + ((person_box[traking_person_idx][PERSON_BOX_RIGHT] - person_box[traking_person_idx][PERSON_BOX_LEFT])/2);
@@ -479,7 +484,7 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             //printf("box area : %d = (%d X %d)\n", box_area, (right - left), (bot - top));
 
 
-            int where_is_box = box_horizontal_center - person_box[traking_person_idx][PERSON_BOX_LEFT])/2) - cam_horizontal_center;
+            int where_is_box = box_horizontal_center - cam_horizontal_center;
             printf("where is box : %d\n", where_is_box);
             
 
@@ -507,15 +512,15 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
                 printf("No one was detected...\n");
             }
 
-            printf("write data : %s %s %s %s\n\n", uart_write_data[3], uart_write_data[2], uart_write_data[1], uart_write_data[0]);
+            printf("write data : %s %s %s %s\n", uart_write_data[3], uart_write_data[2], uart_write_data[1], uart_write_data[0]);
             
-            if(box_horizontal_center > im.w/3*2) printf("turn right!\n");
+            if(box_horizontal_center > im.w/3*2) printf("turn right!\n\n");
 
-            else if (person_idx == 0) printf("go straight!\n");
+            else if (person_idx == 0) printf("go straight!\n\n");
 
-            else if (person_idx != 0 && box_horizontal_center < im.w/3) printf("turn left!\n");
+            else if (person_idx != 0 && box_horizontal_center < im.w/3) printf("turn left!\n\n");
 
-            else printf("go straight!\n");
+            else printf("go straight!\n\n");
 
 
 
