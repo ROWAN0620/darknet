@@ -403,7 +403,26 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+    int fd = 0;
+    char *portname = "/dev/ttyACM0"; // lab car
+    //char *portname = "/dev/ttyUSB0"; // avr board
+    int wlen = 0;
+
+    fd = open(portname, O_RDWR | O_NOCTTY | O_SYNC);
+    if (fd < 0) {
+        printf("Error opening %s: %s\n", portname, strerror(errno));
+        // return ;
+    }
+
+    /*baudrate 115200, 8 bits, no parity, 1 stop bit */
+    set_interface_attribs(fd, B115200); // lab car
+    //set_interface_attribs(fd, B9600); // avr board
+    //set_mincount(fd, 0);                /* set to pure timed read */
+
+    char* uart_write_data[4] = {"0", "0", "0", "0"}; 
+
     printf("number of person : %d / %d\n\n", person_idx, num);
+
     if (person_idx > 0) {
         if (person_idx == 1) traking_person_idx = 0;
         else {
@@ -439,22 +458,6 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-            int fd = 0;
-            char *portname = "/dev/ttyACM0"; // lab car
-            //char *portname = "/dev/ttyUSB0"; // avr board
-            int wlen = 0;
-
-            fd = open(portname, O_RDWR | O_NOCTTY | O_SYNC);
-            if (fd < 0) {
-                printf("Error opening %s: %s\n", portname, strerror(errno));
-                // return ;
-            }
-
-            /*baudrate 115200, 8 bits, no parity, 1 stop bit */
-            set_interface_attribs(fd, B115200); // lab car
-            //set_interface_attribs(fd, B9600); // avr board
-            //set_mincount(fd, 0);                /* set to pure timed read */
-
             printf("tracking person%d...\n", traking_person_idx + 1);
 
             int cam_horizontal_center = im.w/2;
@@ -486,9 +489,6 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
 
             int where_is_box = box_horizontal_center - cam_horizontal_center;
             printf("where is box : %d\n", where_is_box);
-            
-
-            char* uart_write_data[4] = {"0", "0", "0", "0"}; 
 
             if (!(where_is_box < 0)) uart_write_data[3] = "1";
             else {
@@ -506,32 +506,21 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
 
             uart_write_data[0] = int_to_string(where_is_box % 10);
 
-            if (person_idx == 0)
-            {
-                for (i = 0; i < 4; i ++) uart_write_data[i] = 0;
-                printf("No one was detected...\n");
-            }
-
             printf("write data : %s %s %s %s\n", uart_write_data[3], uart_write_data[2], uart_write_data[1], uart_write_data[0]);
             
             if(box_horizontal_center > im.w/3*2) printf("turn right!\n\n");
 
-            else if (person_idx == 0) printf("go straight!\n\n");
-
-            else if (person_idx != 0 && box_horizontal_center < im.w/3) printf("turn left!\n\n");
+            else if (box_horizontal_center < im.w/3) printf("turn left!\n\n");
 
             else printf("go straight!\n\n");
-
-
 
 
             for (int uart_idx  = 3; uart_idx > -1; uart_idx--) {
                 wlen = write(fd, uart_write_data[uart_idx], 1);
 
                 /* simple output */
-                if (!(wlen > 0)) {
-                    printf("Error from write: %d, %d\n", wlen, errno);
-                }
+                if (!(wlen > 0)) printf("Error from write: %d, %d\n", wlen, errno);
+                
                 tcdrain(fd);    /* delay for output */
             }
 
@@ -540,7 +529,26 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
 
     } 
 
-    else;
+    else {
+            if (person_idx == 0)
+            {
+                for (i = 0; i < 4; i ++) uart_write_data[i] = "0";
+                printf("No one was detected...\n");
+            }
+
+            printf("write data : %s %s %s %s\n", uart_write_data[3], uart_write_data[2], uart_write_data[1], uart_write_data[0]);
+            printf("go straight!\n\n");
+
+            for (int uart_idx  = 3; uart_idx > -1; uart_idx--) {
+                wlen = write(fd, uart_write_data[uart_idx], 1);
+
+                /* simple output */
+                if (!(wlen > 0)) printf("Error from write: %d, %d\n", wlen, errno);
+            
+                tcdrain(fd);    /* delay for output */
+        }
+
+    }
 }
 
 void transpose_image(image im)
