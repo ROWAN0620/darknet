@@ -464,7 +464,7 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             //printf("cam 2/3 : (%d, %d)\n", im.w/3*2,cam_vertical_center);
 
             int box_horizontal_center = 0;
-            //int box_vertical_center = 0;
+            int box_vertical_center = 0;
             
 
             /*
