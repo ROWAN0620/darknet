@@ -16,6 +16,11 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
+#define PERSON_BOX_LEFT 0 /////////////////////////
+#define PERSON_BOX_RIGHT 1 /////////////////////////
+#define PERSON_BOX_TOP 2 /////////////////////////
+#define PERSON_BOX_BOT 3 /////////////////////////
+
 int set_interface_attribs(int fd, int speed)
 {
 	struct termios tty;
@@ -303,14 +308,16 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
     int i,j;
     int person_idx = 1;/////////////////////////
     int person_correct = 0;/////////////////////////
+    int person_box[num][4] = { 0, };/////////////////////////
+    int traking_person_idx = 0;/////////////////////////
     for(i = 0; i < num; ++i){
         char labelstr[4096] = {0};
         int class = -1;
         for(j = 0; j < classes; ++j){
             if (dets[i].prob[j] > thresh){
-		//if (strcmp(names[j],"person") == 0){/////////////////////////  
-		person_correct = dets[i].prob[j] * 100;          
-		if (class < 0) {
+                //if (strcmp(names[j],"person") == 0){/////////////////////////  
+                person_correct = dets[i].prob[j] * 100;          
+                if (class < 0) {
                     strcat(labelstr, names[j]);
                     strcat(labelstr, int_to_string(person_idx));/////////////////////////
                     strcat(labelstr, "  ");/////////////////////////
@@ -325,7 +332,7 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
                     strcat(labelstr, int_to_string(person_correct / 10));/////////////////////////
                     strcat(labelstr, int_to_string(person_correct % 10));/////////////////////////
                 }
-		//}/////////////////////////////
+                //}/////////////////////////////
                 printf("%s %d: %.0f%%\n", names[j], person_idx++, dets[i].prob[j]*100);///////////////////////// person_idx++
             }
         }
@@ -364,77 +371,11 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             if(top < 0) top = 0;
             if(bot > im.h-1) bot = im.h-1;
 
-//////////////////////////////////////////////////////////////////////////////////////////////
+            person_box[i][PERSON_BOX_LEFT] = left;/////////////////////////
+            person_box[i][PERSON_BOX_RIGHT] = right;/////////////////////////
+            person_box[i][PERSON_BOX_TOP] = top;/////////////////////////
+            person_box[i][PERSON_BOX_BOT] = bot;/////////////////////////
 
-            int fd = 0;
-            char *portname = "/dev/ttyACM0"; // lab car
-            //char *portname = "/dev/ttyUSB0"; // avr board
-            int wlen = 0;
-
-            fd = open(portname, O_RDWR | O_NOCTTY | O_SYNC);
-            if (fd < 0) {
-		printf("Error opening %s: %s\n", portname, strerror(errno));
-		// return ;
-            }
-
-            /*baudrate 115200, 8 bits, no parity, 1 stop bit */
-            set_interface_attribs(fd, B115200); // lab car
-            //set_interface_attribs(fd, B9600); // avr board
-            //set_mincount(fd, 0);                /* set to pure timed read */
-
-
-
-            int cam_horizontal_center = im.w/2;
-            int cam_vertical_center = im.h/2;
-            printf("cam center : (%d, %d)\n", cam_horizontal_center,cam_vertical_center);
-            //printf("cam 1/3 : (%d, %d)\n", im.w/3,cam_vertical_center);
-            //printf("cam 2/3 : (%d, %d)\n", im.w/3*2,cam_vertical_center);
-            
-
-            int box_horizontal_center = left + ((right - left)/2);
-            int box_vertical_center = top + ((bot - top)/2);
-            printf("box center : (%d, %d)\n", box_horizontal_center,box_vertical_center);
-
-            //int image_area = im.w * im.h;
-            //int box_area = (right - left)*(bot - top);
-            //printf("box area : %d = (%d X %d)\n", box_area, (right - left), (bot - top));
-
-
-            int where_is_box = box_horizontal_center - cam_horizontal_center;
-            printf("where is box : %d\n", where_is_box);
-            
-
-            char* uart_write_data[4] = {"0", "0", "0", "0"}; 
-
-            if (!(where_is_box < 0)) uart_write_data[3] = "1";
-            else {
-		uart_write_data[3] = "0";
-		where_is_box = -1 * where_is_box; 
-            }
-
-            if (where_is_box < 100) uart_write_data[2] = "0";
-            else uart_write_data[2] = int_to_string(where_is_box / 100);
-
-            where_is_box = where_is_box % 100;
-
-            if (where_is_box < 10) uart_write_data[1] = "0";
-            else uart_write_data[1] = int_to_string(where_is_box / 10);
-
-            uart_write_data[0] = int_to_string(where_is_box % 10);
-            printf("write data : %s %s %s %s\n\n", uart_write_data[3], uart_write_data[2], uart_write_data[1], uart_write_data[0]);
-
-
-            for (int uart_idx  = 3; uart_idx > -1; uart_idx--) {
-		wlen = write(fd, uart_write_data[uart_idx], 1);
-
-		/* simple output */
-		if (!(wlen > 0)) {
-			printf("Error from write: %d, %d\n", wlen, errno);
-		}
-		tcdrain(fd);    /* delay for output */
-            }
-
-//////////////////////////////////////////////////////////////////////////////////////////////
 
             draw_box_width(im, left, top, right, bot, width, red, green, blue);
             if (alphabet) {
@@ -453,6 +394,113 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             }
         }
     }
+
+    if (num > 0) {
+        if (num == 1) traking_person_idx = 0;
+        else {
+            int near_center_person_idx = 0;
+            int horizontal_center_diff = 0;
+            int vertical_center_diff = 0;
+
+            int currnent_near_horizontal_center_diff = (im.w / 2) - (person_box[0][PERSON_BOX_LEFT] + ((person_box[0][PERSON_BOX_RIGHT] - person_box[0][PERSON_BOX_LEFT]) / 2));
+            if (currnent_near_horizontal_center_diff < 0) currnent_near_horizontal_center_diff = currnent_near_horizontal_center_diff * (-1);
+            int current_near_vertical_center_diff = (im.h / 2) - (person_box[0][PERSON_BOX_TOP] + ((person_box[0][PERSON_BOX_BOT] - person_box[0][PERSON_BOX_TOP]) / 2));
+            if (current_near_vertical_center_diff < 0) current_near_vertical_center_diff = current_near_vertical_center_diff * (-1);
+
+            int current_diff = (currnent_near_horizontal_center_diff * currnent_near_horizontal_center_diff) + (current_near_vertical_center_diff * current_near_vertical_center_diff);
+            int diff = 0;
+
+            for (i = 1; i < num; i++ ) {
+
+                horizontal_center_diff = (im.w / 2) - (person_box[i][PERSON_BOX_LEFT] + ((person_box[i][PERSON_BOX_RIGHT] - person_box[i][PERSON_BOX_LEFT]) / 2));
+                if (horizontal_center_diff < 0) horizontal_center_diff = horizontal_center_diff * (-1);
+                vertical_center_diff = (im.h / 2) - (person_box[i][PERSON_BOX_TOP] + ((person_box[i][PERSON_BOX_BOT] - person_box[i][PERSON_BOX_TOP]) / 2));
+                if (vertical_center_diff < 0) vertical_center_diff = vertical_center_diff * (-1);
+
+                diff = (horizontal_center_diff * horizontal_center_diff) + (vertical_center_diff * vertical_center_diff);
+
+                if (diff < current_diff) near_center_person_idx = i;
+                
+            }
+            traking_person_idx = near_center_person_idx;
+        }
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+            int fd = 0;
+            char *portname = "/dev/ttyACM0"; // lab car
+            //char *portname = "/dev/ttyUSB0"; // avr board
+            int wlen = 0;
+
+            fd = open(portname, O_RDWR | O_NOCTTY | O_SYNC);
+            if (fd < 0) {
+                printf("Error opening %s: %s\n", portname, strerror(errno));
+                // return ;
+            }
+
+            /*baudrate 115200, 8 bits, no parity, 1 stop bit */
+            set_interface_attribs(fd, B115200); // lab car
+            //set_interface_attribs(fd, B9600); // avr board
+            //set_mincount(fd, 0);                /* set to pure timed read */
+
+
+
+            int cam_horizontal_center = im.w/2;
+            int cam_vertical_center = im.h/2;
+            printf("cam center : (%d, %d)\n", cam_horizontal_center,cam_vertical_center);
+            //printf("cam 1/3 : (%d, %d)\n", im.w/3,cam_vertical_center);
+            //printf("cam 2/3 : (%d, %d)\n", im.w/3*2,cam_vertical_center);
+            
+
+            int box_horizontal_center = person_box[traking_person_idx][PERSON_BOX_LEFT] + ((person_box[traking_person_idx][PERSON_BOX_RIGHT] - person_box[traking_person_idx][PERSON_BOX_LEFT])/2);
+            int box_vertical_center = person_box[traking_person_idx][PERSON_BOX_TOP] + ((person_box[traking_person_idx][PERSON_BOX_BOT] - person_box[traking_person_idx][PERSON_BOX_TOP])/2);
+            printf("box center : (%d, %d)\n", box_horizontal_center,box_vertical_center);
+
+            //int image_area = im.w * im.h;
+            //int box_area = (right - left)*(bot - top);
+            //printf("box area : %d = (%d X %d)\n", box_area, (right - left), (bot - top));
+
+
+            int where_is_box = box_horizontal_center - cam_horizontal_center;
+            printf("where is box : %d\n", where_is_box);
+            
+
+            char* uart_write_data[4] = {"0", "0", "0", "0"}; 
+
+            if (!(where_is_box < 0)) uart_write_data[3] = "1";
+            else {
+                uart_write_data[3] = "0";
+                where_is_box = -1 * where_is_box; 
+            }
+
+            if (where_is_box < 100) uart_write_data[2] = "0";
+            else uart_write_data[2] = int_to_string(where_is_box / 100);
+
+            where_is_box = where_is_box % 100;
+
+            if (where_is_box < 10) uart_write_data[1] = "0";
+            else uart_write_data[1] = int_to_string(where_is_box / 10);
+
+            uart_write_data[0] = int_to_string(where_is_box % 10);
+            printf("write data : %s %s %s %s\n\n", uart_write_data[3], uart_write_data[2], uart_write_data[1], uart_write_data[0]);
+
+
+            for (int uart_idx  = 3; uart_idx > -1; uart_idx--) {
+                wlen = write(fd, uart_write_data[uart_idx], 1);
+
+                /* simple output */
+                if (!(wlen > 0)) {
+                    printf("Error from write: %d, %d\n", wlen, errno);
+                }
+                tcdrain(fd);    /* delay for output */
+            }
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    } 
+
+    else;
 }
 
 void transpose_image(image im)
