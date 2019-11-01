@@ -1,0 +1,6 @@
+#Makefile error
+export PATH=/usr/local/cuda-9.0/bin${PATH:+:${PATH}}
+
+
+#update error
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 40976EAF437D05B5
