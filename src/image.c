@@ -429,6 +429,9 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
 
     if (person_idx > 0) {
 
+        int cam_horizontal_center = im.w / 2; 
+        int cam vertical_center = im.h / 2;
+
         int box_horizontal_center = person_box[0][PERSON_BOX_LEFT] + ((person_box[0][PERSON_BOX_RIGHT] - person_box[0][PERSON_BOX_LEFT])/2);
         int box_vertical_center = person_box[0][PERSON_BOX_TOP] + ((person_box[0][PERSON_BOX_BOT] - person_box[0][PERSON_BOX_TOP])/2);
         printf("person1 box center : (%d, %d)\n", box_horizontal_center,box_vertical_center);
