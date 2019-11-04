@@ -16,10 +16,12 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
-#define PERSON_BOX_LEFT 0 /////////////////////////
-#define PERSON_BOX_RIGHT 1 /////////////////////////
-#define PERSON_BOX_TOP 2 /////////////////////////
-#define PERSON_BOX_BOT 3 /////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+#define PERSON_BOX_LEFT 0 
+#define PERSON_BOX_RIGHT 1 
+#define PERSON_BOX_TOP 2 
+#define PERSON_BOX_BOT 3 
 
 int set_interface_attribs(int fd, int speed)
 {
@@ -375,7 +377,7 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             if(top < 0) top = 0;
             if(bot > im.h-1) bot = im.h-1;
 
-            if (dets[i].prob[0] > thresh) {
+            if (person_correct > thresh && !(person_box_idx > person_idx)) {
                 person_box[person_box_idx][PERSON_BOX_LEFT] = left;/////////////////////////
                 person_box[person_box_idx][PERSON_BOX_RIGHT] = right;/////////////////////////
                 person_box[person_box_idx][PERSON_BOX_TOP] = top;/////////////////////////
@@ -401,7 +403,10 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
         }
     }
 
-//////////////////////////////////////////////////////////////////////////////////////////////
+    printf("person idx: %d\n", person_idx);
+    printf("person box idx: %d\n", person_box_idx);
+    
+    //////////////////////////////////////////////////////////////////////////////////////////////
 
     int fd = 0;
     char *portname = "/dev/ttyACM0"; // lab car
@@ -425,6 +430,7 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
 
     if (person_idx > 0) {
         if (person_idx == 1) traking_person_idx = 0;
+        
         else {
             int near_center_person_idx = 0;
             int horizontal_center_diff = 0;
@@ -437,10 +443,9 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
 
             int current_diff = (currnent_near_horizontal_center_diff * currnent_near_horizontal_center_diff) + (current_near_vertical_center_diff * current_near_vertical_center_diff);
             printf("person1 far from center: %d\n", current_diff);
+            
             int diff = 0;
-
             for (i = 1; i < person_idx; i++ ) {
-
                 horizontal_center_diff = (im.w / 2) - (person_box[i][PERSON_BOX_LEFT] + ((person_box[i][PERSON_BOX_RIGHT] - person_box[i][PERSON_BOX_LEFT]) / 2));
                 if (horizontal_center_diff < 0) horizontal_center_diff = horizontal_center_diff * (-1);
                 vertical_center_diff = (im.h / 2) - (person_box[i][PERSON_BOX_TOP] + ((person_box[i][PERSON_BOX_BOT] - person_box[i][PERSON_BOX_TOP]) / 2));
@@ -455,99 +460,98 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             }
             traking_person_idx = near_center_person_idx;
         }
+        
+        //////////////////////////////////////////////////////////////////////////////////////////////
 
-//////////////////////////////////////////////////////////////////////////////////////////////
+        printf("tracking person%d...\n", traking_person_idx + 1);
 
-            printf("tracking person%d...\n", traking_person_idx + 1);
+        int cam_horizontal_center = im.w/2;
+        //int cam_vertical_center = im.h/2;
+        //printf("cam center : (%d, %d)\n", cam_horizontal_center,cam_vertical_center);
+        //printf("cam 1/3 : (%d, %d)\n", im.w/3,cam_vertical_center);
+        //printf("cam 2/3 : (%d, %d)\n", im.w/3*2,cam_vertical_center);
 
-            int cam_horizontal_center = im.w/2;
-            //int cam_vertical_center = im.h/2;
-            //printf("cam center : (%d, %d)\n", cam_horizontal_center,cam_vertical_center);
-            //printf("cam 1/3 : (%d, %d)\n", im.w/3,cam_vertical_center);
-            //printf("cam 2/3 : (%d, %d)\n", im.w/3*2,cam_vertical_center);
+        int box_horizontal_center = 0;
+        int box_vertical_center = 0;
+        
 
-            int box_horizontal_center = 0;
-            int box_vertical_center = 0;
-            
+        ///*
+        for (i = 0; i < person_idx; i++) {
+            box_horizontal_center = person_box[i][PERSON_BOX_LEFT] + ((person_box[i][PERSON_BOX_RIGHT] - person_box[i][PERSON_BOX_LEFT])/2);
+            box_vertical_center = person_box[i][PERSON_BOX_TOP] + ((person_box[i][PERSON_BOX_BOT] - person_box[i][PERSON_BOX_TOP])/2);
+            printf("person%d box center : (%d, %d)\n", i+1, box_horizontal_center,box_vertical_center);
+        }
+        //*/
+        
 
-            /*
-            for (i = 0; i < person_idx; i++) {
-                box_horizontal_center = person_box[i][PERSON_BOX_LEFT] + ((person_box[i][PERSON_BOX_RIGHT] - person_box[i][PERSON_BOX_LEFT])/2);
-                box_vertical_center = person_box[i][PERSON_BOX_TOP] + ((person_box[i][PERSON_BOX_BOT] - person_box[i][PERSON_BOX_TOP])/2);
-                printf("person%d box center : (%d, %d)\n", i+1, box_horizontal_center,box_vertical_center);
-            }
-            */
-            
+        box_horizontal_center = person_box[traking_person_idx][PERSON_BOX_LEFT] + ((person_box[traking_person_idx][PERSON_BOX_RIGHT] - person_box[traking_person_idx][PERSON_BOX_LEFT])/2);
+        box_vertical_center = person_box[traking_person_idx][PERSON_BOX_TOP] + ((person_box[traking_person_idx][PERSON_BOX_BOT] - person_box[traking_person_idx][PERSON_BOX_TOP])/2);
 
-            box_horizontal_center = person_box[traking_person_idx][PERSON_BOX_LEFT] + ((person_box[traking_person_idx][PERSON_BOX_RIGHT] - person_box[traking_person_idx][PERSON_BOX_LEFT])/2);
-            box_vertical_center = person_box[traking_person_idx][PERSON_BOX_TOP] + ((person_box[traking_person_idx][PERSON_BOX_BOT] - person_box[traking_person_idx][PERSON_BOX_TOP])/2);
-
-            //int image_area = im.w * im.h;
-            //int box_area = (right - left)*(bot - top);
-            //printf("box area : %d = (%d X %d)\n", box_area, (right - left), (bot - top));
-
-
-            int where_is_box = box_horizontal_center - cam_horizontal_center;
-            printf("where is box : %d\n", where_is_box);
-
-            if (!(where_is_box < 0)) uart_write_data[3] = "1";
-            else {
-                uart_write_data[3] = "0";
-                where_is_box = -1 * where_is_box; 
-            }
-
-            if (where_is_box < 100) uart_write_data[2] = "0";
-            else uart_write_data[2] = int_to_string(where_is_box / 100);
-
-            where_is_box = where_is_box % 100;
-
-            if (where_is_box < 10) uart_write_data[1] = "0";
-            else uart_write_data[1] = int_to_string(where_is_box / 10);
-
-            uart_write_data[0] = int_to_string(where_is_box % 10);
-
-            printf("write data : %s %s %s %s\n", uart_write_data[3], uart_write_data[2], uart_write_data[1], uart_write_data[0]);
-            
-            if(box_horizontal_center > im.w/3*2) printf("turn right!\n\n");
-
-            else if (box_horizontal_center < im.w/3) printf("turn left!\n\n");
-
-            else printf("go straight!\n\n");
+        //int image_area = im.w * im.h;
+        //int box_area = (right - left)*(bot - top);
+        //printf("box area : %d = (%d X %d)\n", box_area, (right - left), (bot - top));
 
 
-            for (int uart_idx  = 3; uart_idx > -1; uart_idx--) {
-                wlen = write(fd, uart_write_data[uart_idx], 1);
-
-                /* simple output */
-                if (!(wlen > 0)) printf("Error from write: %d, %d\n", wlen, errno);
-                
-                tcdrain(fd);    /* delay for output */
-            }
-
-//////////////////////////////////////////////////////////////////////////////////////////////
+        int where_is_box = box_horizontal_center - cam_horizontal_center;
+        printf("where is box : %d\n", where_is_box);
 
 
-    } 
+        ///////////////////////////////////// integer to string //////////////////////////////////////
 
-    else {
-            if (person_idx == 0)
-            {
-                for (i = 0; i < 4; i ++) uart_write_data[i] = "0";
-                printf("No one was detected...\n");
-            }
-
-            printf("write data : %s %s %s %s\n", uart_write_data[3], uart_write_data[2], uart_write_data[1], uart_write_data[0]);
-            printf("go straight!\n\n");
-
-            for (int uart_idx  = 3; uart_idx > -1; uart_idx--) {
-                wlen = write(fd, uart_write_data[uart_idx], 1);
-
-                /* simple output */
-                if (!(wlen > 0)) printf("Error from write: %d, %d\n", wlen, errno);
-            
-                tcdrain(fd);    /* delay for output */
+        if (!(where_is_box < 0)) uart_write_data[3] = "1";
+        else {
+            uart_write_data[3] = "0";
+            where_is_box = -1 * where_is_box; 
         }
 
+        if (where_is_box < 100) uart_write_data[2] = "0";
+        else uart_write_data[2] = int_to_string(where_is_box / 100);
+
+        where_is_box = where_is_box % 100;
+
+        if (where_is_box < 10) uart_write_data[1] = "0";
+        else uart_write_data[1] = int_to_string(where_is_box / 10);
+
+        uart_write_data[0] = int_to_string(where_is_box % 10);
+
+        //////////////////////////////////// integer to string end ///////////////////////////////////
+
+
+        printf("write data : %s %s %s %s\n", uart_write_data[3], uart_write_data[2], uart_write_data[1], uart_write_data[0]);
+        
+        if (box_horizontal_center > im.w/3*2) printf("turn right!\n\n");
+        else if (box_horizontal_center < im.w/3) printf("turn left!\n\n");
+        else printf("go straight!\n\n");
+
+
+        for (int uart_idx  = 3; uart_idx > -1; uart_idx--) {
+            wlen = write(fd, uart_write_data[uart_idx], 1);
+
+            /* simple output */
+            if (!(wlen > 0)) printf("Error from write: %d, %d\n", wlen, errno);
+            
+            tcdrain(fd);    /* delay for output */
+        }
+    } 
+
+    //////////////////////////////////////////////////////////////////////////////////////////////
+
+    else {
+        printf("No one was detected...\n");
+        
+        for (i = 0; i < 4; i ++) uart_write_data[i] = "0";
+        
+        printf("write data : %s %s %s %s\n", uart_write_data[3], uart_write_data[2], uart_write_data[1], uart_write_data[0]);
+        printf("go straight!\n\n");
+        
+        for (int uart_idx  = 3; uart_idx > -1; uart_idx--) {
+            wlen = write(fd, uart_write_data[uart_idx], 1);
+            
+            /* simple output */
+            if (!(wlen > 0)) printf("Error from write: %d, %d\n", wlen, errno);
+            
+            tcdrain(fd);    /* delay for output */
+        }
     }
 }
 
