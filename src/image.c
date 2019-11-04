@@ -410,7 +410,7 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
 
     fd = open(portname, O_RDWR | O_NOCTTY | O_SYNC);
     if (fd < 0) {
-        printf("Error opening %s: %s\n", portname, strerror(errno));
+        printf("\nError opening %s: %s\n", portname, strerror(errno));
         // return ;
     }
 
@@ -421,7 +421,7 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
 
     char* uart_write_data[4] = {"0", "0", "0", "0"}; 
 
-    printf("number of person : %d / %d\n\n", person_idx, num);
+    printf("number of person : %d / %d\n", person_idx, num);
 
     if (person_idx > 0) {
         if (person_idx == 1) traking_person_idx = 0;
