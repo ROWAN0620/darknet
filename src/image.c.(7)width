@@ -308,36 +308,36 @@ image **load_alphabet()
 void draw_detections(image im, detection *dets, int num, float thresh, char **names, image **alphabet, int classes)
 {
     int i,j;
-    int person_idx = 0; /////////////////////////
-    int person_correct = 0; /////////////////////////
-    int person_box[num][4]; /////////////////////////
-    int person_box_idx = 0; /////////////////////////
-    
+    int person_idx = 0;/////////////////////////
+    int person_correct = 0;/////////////////////////
+    int person_box[num][4];/////////////////////////
+    int person_box_idx = 0;/////////////////////////
+    int traking_person_idx = 0;/////////////////////////
     for(i = 0; i < num; ++i){
         char labelstr[4096] = {0};
         int class = -1;
         for(j = 0; j < classes; ++j){
             if (dets[i].prob[j] > thresh){
-                //if (strcmp(names[j],"person") == 0){ /////////////////////////
+                //if (strcmp(names[j],"person") == 0){/////////////////////////
                 person_idx ++;
                 person_correct = dets[i].prob[j] * 100;          
                 if (class < 0) {
                     strcat(labelstr, names[j]);
-                    strcat(labelstr, int_to_string(person_idx)); /////////////////////////
-                    strcat(labelstr, "  "); /////////////////////////
-                    strcat(labelstr, int_to_string(person_correct / 10)); /////////////////////////
-                    strcat(labelstr, int_to_string(person_correct % 10)); /////////////////////////
+                    strcat(labelstr, int_to_string(person_idx));/////////////////////////
+                    strcat(labelstr, "  ");/////////////////////////
+                    strcat(labelstr, int_to_string(person_correct / 10));/////////////////////////
+                    strcat(labelstr, int_to_string(person_correct % 10));/////////////////////////
                     class = j;
                 } else {
                     strcat(labelstr, ", ");
                     strcat(labelstr, names[j]);
-                    strcat(labelstr, int_to_string(person_idx)); /////////////////////////
-                    strcat(labelstr, "  "); /////////////////////////
-                    strcat(labelstr, int_to_string(person_correct / 10)); /////////////////////////
-                    strcat(labelstr, int_to_string(person_correct % 10)); /////////////////////////
+                    strcat(labelstr, int_to_string(person_idx));/////////////////////////
+                    strcat(labelstr, "  ");/////////////////////////
+                    strcat(labelstr, int_to_string(person_correct / 10));/////////////////////////
+                    strcat(labelstr, int_to_string(person_correct % 10));/////////////////////////
                 }
-                //} /////////////////////////////
-                printf("%s %d: %.0f%%\n", names[j], person_idx, dets[i].prob[j]*100); ///////////////////////// person_idx++
+                //}/////////////////////////////
+                printf("%s %d: %.0f%%\n", names[j], person_idx, dets[i].prob[j]*100);///////////////////////// person_idx++
             }
         }
 
@@ -378,10 +378,10 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
             if(bot > im.h-1) bot = im.h-1;
 
             if (person_correct > thresh && !(person_box_idx > person_idx)) {
-                person_box[person_box_idx][PERSON_BOX_LEFT] = left; /////////////////////////
-                person_box[person_box_idx][PERSON_BOX_RIGHT] = right; /////////////////////////
-                person_box[person_box_idx][PERSON_BOX_TOP] = top; /////////////////////////
-                person_box[person_box_idx++][PERSON_BOX_BOT] = bot; /////////////////////////
+                person_box[person_box_idx][PERSON_BOX_LEFT] = left;/////////////////////////
+                person_box[person_box_idx][PERSON_BOX_RIGHT] = right;/////////////////////////
+                person_box[person_box_idx][PERSON_BOX_TOP] = top;/////////////////////////
+                person_box[person_box_idx++][PERSON_BOX_BOT] = bot;/////////////////////////
             }
 
 
@@ -428,7 +428,6 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
     char* uart_write_data[4] = {"0", "0", "0", "0"}; 
 
     if (person_idx > 0) {
-        int tracking_person_idx = 0; /////////////////////////
 
         int box_width = person_box[0][PERSON_BOX_RIGHT] - person_box[0][PERSON_BOX_LEFT];
         int box_hight = person_box[0][PERSON_BOX_BOT] - person_box[0][PERSON_BOX_TOP];
@@ -446,7 +445,7 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
 
         int box_horizontal_center = person_box[0][PERSON_BOX_LEFT] + (box_width/2);
         int box_vertical_center = person_box[0][PERSON_BOX_TOP] + (box_hight/2);
-        
+        printf("person1 box center : (%d, %d)\n", box_horizontal_center,box_vertical_center);
 
 		/*
         int horizontal_center_diff = 0;
@@ -461,58 +460,55 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
         printf("person1 far from center: %d\n", near_center_diff);
 		*/
 
+        if (person_idx == 1) traking_person_idx = 0;
         
+        else {
+            for (i = 1; i < person_idx; i++ ) {
+
+                box_width = person_box[i][PERSON_BOX_RIGHT] - person_box[i][PERSON_BOX_LEFT];
+                box_hight = person_box[i][PERSON_BOX_BOT] - person_box[i][PERSON_BOX_TOP];
+
+                /*
+
+                //int box_area = box_width*box_hight;
+                //printf("box area : %d = (%d X %d)\n", box_area, box_width, box_hight);
+
+                box_horizontal_center = person_box[i][PERSON_BOX_LEFT] + (box_width/2);
+                box_vertical_center = person_box[i][PERSON_BOX_TOP] + (box_hight/2);
+                printf("person%d box center : (%d, %d)\n", i+1, box_horizontal_center,box_vertical_center);
         
-        for (i = 0; i < person_idx; i++ ) {
+                horizontal_center_diff = (im.w / 2) - box_horizontal_center;
+                if (horizontal_center_diff < 0) horizontal_center_diff = horizontal_center_diff * (-1);
+                vertical_center_diff = (im.h / 2) - box_vertical_center;
+                if (vertical_center_diff < 0) vertical_center_diff = vertical_center_diff * (-1);
 
-            box_width = person_box[i][PERSON_BOX_RIGHT] - person_box[i][PERSON_BOX_LEFT];
-            box_hight = person_box[i][PERSON_BOX_BOT] - person_box[i][PERSON_BOX_TOP];
+                diff = (horizontal_center_diff * horizontal_center_diff) + (vertical_center_diff * vertical_center_diff);
 
-            box_horizontal_center = person_box[i][PERSON_BOX_LEFT] + (box_width / 2);
-            box_vertical_center = person_box[i][PERSON_BOX_TOP] + (box_hight / 2);
-            printf("person%d box center : (%d, %d)\n", i+1, box_horizontal_center,box_vertical_center);
-            
-            /*
+                printf("person%d far from center: %d\n", i + 1, diff);
 
-            // int box_area = box_width*box_hight;
-            // printf("box area : %d = (%d X %d)\n", box_area, box_width, box_hight);
+                if (diff < near_center_diff) {
+                	traking_person_idx = i; 
+                	near_center_diff = diff;
+                }
 
-            box_horizontal_center = person_box[i][PERSON_BOX_LEFT] + (box_width/2);
-            box_vertical_center = person_box[i][PERSON_BOX_TOP] + (box_hight/2);
-            printf("person%d box center : (%d, %d)\n", i+1, box_horizontal_center,box_vertical_center);
-    
-            horizontal_center_diff = (im.w / 2) - box_horizontal_center;
-            if (horizontal_center_diff < 0) horizontal_center_diff = horizontal_center_diff * (-1);
-            vertical_center_diff = (im.h / 2) - box_vertical_center;
-            if (vertical_center_diff < 0) vertical_center_diff = vertical_center_diff * (-1);
-
-            diff = (horizontal_center_diff * horizontal_center_diff) + (vertical_center_diff * vertical_center_diff);
-
-            printf("person%d far from center: %d\n", i + 1, diff);
-
-            if (diff < near_center_diff) {
-                tracking_person_idx = i; 
-                near_center_diff = diff;
-            }
-
-            */
-            if (box_width_max < box_width) {
-                tracking_person_idx = i;
-                box_width_max = box_width;
+                */
+                if (box_width_max < box_width) {
+                	traking_person_idx = i;
+                	box_width_max = box_width;
+                }
             }
         }
         
-        
         //////////////////////////////////////////////////////////////////////////////////////////////
 
-        printf("tracking person%d...\n", tracking_person_idx + 1);
+        printf("tracking person%d...\n", traking_person_idx + 1);
         
 
-        box_horizontal_center = person_box[tracking_person_idx][PERSON_BOX_LEFT] + ((person_box[tracking_person_idx][PERSON_BOX_RIGHT] - person_box[tracking_person_idx][PERSON_BOX_LEFT])/2);
-        box_vertical_center = person_box[tracking_person_idx][PERSON_BOX_TOP] + ((person_box[tracking_person_idx][PERSON_BOX_BOT] - person_box[tracking_person_idx][PERSON_BOX_TOP])/2);
+        box_horizontal_center = person_box[traking_person_idx][PERSON_BOX_LEFT] + ((person_box[traking_person_idx][PERSON_BOX_RIGHT] - person_box[traking_person_idx][PERSON_BOX_LEFT])/2);
+        box_vertical_center = person_box[traking_person_idx][PERSON_BOX_TOP] + ((person_box[traking_person_idx][PERSON_BOX_BOT] - person_box[traking_person_idx][PERSON_BOX_TOP])/2);
 
         
-        //printf("box area : %d = (%d X %d)\n", box_area, (person_box[tracking_person_idx][PERSON_BOX_RIGHT] - person_box[tracking_person_idx][PERSON_BOX_LEFT]), (person_box[tracking_person_idx][PERSON_BOX_BOT] - person_box[tracking_person_idx][PERSON_BOX_TOP]));
+        //printf("box area : %d = (%d X %d)\n", box_area, (person_box[traking_person_idx][PERSON_BOX_RIGHT] - person_box[traking_person_idx][PERSON_BOX_LEFT]), (person_box[traking_person_idx][PERSON_BOX_BOT] - person_box[traking_person_idx][PERSON_BOX_TOP]));
 
 
         int where_is_box = box_horizontal_center - cam_horizontal_center;
