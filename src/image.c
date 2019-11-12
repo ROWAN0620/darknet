@@ -446,7 +446,7 @@ void draw_detections(image im, detection *dets, int num, float thresh, char **na
 
         int box_horizontal_center = person_box[0][PERSON_BOX_LEFT] + (box_width/2);
         int box_vertical_center = person_box[0][PERSON_BOX_TOP] + (box_hight/2);
-        printf("person1 box center : (%d, %d)\n", box_horizontal_center,box_vertical_center);
+        
 
 		/*
         int horizontal_center_diff = 0;

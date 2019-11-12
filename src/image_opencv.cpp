@@ -4,38 +4,10 @@
 #include "stdlib.h"
 #include "opencv2/opencv.hpp"
 #include "image.h"
-#include "vector" /////////////////////////
 
 using namespace cv;
 
-vector<vector<int>> tracking_box_info; /////////////////////////
-
 extern "C" {
-
-int push_tracking_box_info(int* p_box)
-{
-    tracking_box_info[0][0].push_back(p_box[0]); // L
-    tracking_box_info[0][1].push_back(p_box[1]); // R
-    tracking_box_info[0][2].push_back(p_box[2]); // T
-    tracking_box_info[0][3].push_back(p_box[3]); // B
-    tracking_box_info[0][4].push_back(1);
-
-    return tracking_box_info[0][4];
-}
-
-int box_distance(int* p_box)
-{
-    int tracking_v_center = tracking_box_info[0][0] + ((tracking_box_info[0][1] - tracking_box_info[0][0])/2);
-    int tracking_h_center = tracking_box_info[0][2] + ((tracking_box_info[0][3] - tracking_box_info[0][2])/2);;
-
-    int box_v_center = p_box[0] + ((p_box[1] - p_box[0])/2);
-    int box_h_center = p_box[2] + ((p_box[3] - p_box[2])/2);
-
-    int distance = ((tracking_v_center - box_v_center) * (tracking_v_center - box_v_center)) + ((tracking_h_center - box_h_center) * (tracking_h_center - box_h_center));
-
-    return distance;
-}
-
 
 IplImage *image_to_ipl(image im)
 {

@@ -18,8 +18,6 @@ void *open_video_stream(const char *f, int c, int w, int h, int fps);
 image get_image_from_stream(void *p);
 image load_image_cv(char *filename, int channels);
 int show_image_cv(image im, const char* name, int ms);
-int push_tracking_box_info(int* p_box);/////////////////////////
-int box_distance(int* p_box);/////////////////////////
 #endif
 
 float get_color(int c, int x, int max);
